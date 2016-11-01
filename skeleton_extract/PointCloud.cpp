@@ -1,5 +1,6 @@
 #include "PointCloud.h"
 
+
 PointCloud::PointCloud(void)
 {
 
@@ -51,9 +52,6 @@ void PointCloud::read_PLY(std::string filename)
 	std::cout << "Downloading "<< number <<" Points ..." << std::endl;
 
 	points = new Point3D[number];
-	vertexs = new Vertex[number];
-	for(int i = 0; i < number; i++)
-		vertexs[i].index = i;
 
 	float data;
 
@@ -85,9 +83,6 @@ void PointCloud::read_PCD(std::string filename)
 	inFile >> s;inFile >> number;
 
 	points = new Point3D[number];
-	vertexs = new Vertex[number];
-	for(int i = 0; i < number; i++)
-		vertexs[i].index = i;
 
 	float data;
 
@@ -108,6 +103,7 @@ void PointCloud::read_PCD(std::string filename)
 //INIT
 void PointCloud::init_parameters()
 {
+	// count the Axis Range( (min,max) >< (x,y,z) )and default radius(RADIUS_DEFAULT)
 	count_default_radius();
 }
 
@@ -129,6 +125,11 @@ void PointCloud::sample_points(unsigned int num)
 		std::cout << "The number you give is larger than size of points !!!" << std::endl;
 		exit(0);
 	}
+
+	//memory the number of sampled points
+	sample_number = num;
+
+	vertexs = new Vertex[num];
 	srand(time(NULL));
 	for(int i = 0; i < num; i++)
 	{
@@ -137,7 +138,7 @@ void PointCloud::sample_points(unsigned int num)
 		{
 			i--; continue;
 		}
-		vertexs[sample_index].isSample = true;
+		vertexs[i] = Vertex(i,points[sample_index]);
 	}
 }
 
@@ -167,27 +168,66 @@ void PointCloud::count_default_radius()
 	//std::cout << "RADIUS_DEFAULT £º" << RADIUS_DEFAULT << std::endl;
 
 }
+
+//Core algorithm : seach neighbour points via distance !!! 
+//@parameter radius ; specify distance
 void PointCloud::search_neighbours(float radius)
 {
-	grid(radius);
-}
-
-void PointCloud::grid(float radius)
-{
+	std::map<Coordiate,std::vector<int>> Map;
 	
-	min_x = min_y = min_z =  2^10;
-	max_x = max_y = max_z = - 2^10;
+	//grid ,make the double directory index 
 	for(int i = 0; i < number; i++)
 	{
-		if(points[i].x < min_x) min_x = points[i].x;
-		if(points[i].x > max_x) max_x = points[i].x;
-		if(points[i].y < min_y) min_y = points[i].y;
-		if(points[i].y > max_y) max_y = points[i].y;
-		if(points[i].z < min_z) min_z = points[i].z;
-		if(points[i].z > max_z) max_z = points[i].z;
+	    int grid_x = (int)((points[i].x - min_x)/radius);
+		int grid_y = (int)((points[i].y - min_y)/radius);
+		int grid_z = (int)((points[i].z - min_z)/radius);
+
+		Coordiate point_in_grid(grid_x,grid_y,grid_z);
+		if(!Map.count(point_in_grid))
+		{
+			std::vector<int> vec;
+			vec.push_back(i);
+			Map[point_in_grid] = vec;
+		}
+		else Map[point_in_grid].push_back(i);
+	}
+
+	// stored the original neighbour,search by the grid_index of sample point
+	for(int i = 0; i < sample_number; i++)
+	{
+		int grid_x = (int)((vertexs[i].point_data.x - min_x)/radius);
+		int grid_y = (int)((vertexs[i].point_data.y - min_y)/radius);
+		int grid_z = (int)((vertexs[i].point_data.z - min_z)/radius);
+		Coordiate point_in_grid(grid_x,grid_y,grid_z);
+		if(Map.count(point_in_grid))
+			vertexs[i].original_neighs = std::vector<int>(Map[point_in_grid]);
+		for(int j = -1; j < 2; j++)
+			for(int k = -1; k < 2; k++)
+				for(int l = -1; l < 2; l++)
+				{
+					if(j==0 && k==0 && l==0) continue;
+					Coordiate point_in_grid(grid_x + j,grid_y + k,grid_z + l);
+					if(Map.count(point_in_grid))
+					{
+						std::vector<int> search_result = Map[point_in_grid];
+						for(int m = 0; m < search_result.size(); m++)
+						{
+							if(distance2(points[search_result[m]],vertexs[i].point_data) < radius * radius )
+                                vertexs[i].original_neighs.push_back(search_result[m]);
+						}
+					}
+						
+				}
 	}
 
 }
+float PointCloud::distance2(Point3D p1,Point3D p2)
+{
+	return (p1.x - p2.x) * (p1.x - p2.x) + 
+		   (p1.y - p2.y) * (p1.y - p2.y) + 
+		   (p1.z - p2.z) * (p1.z - p2.z);
+}
+
 
 
 

@@ -10,7 +10,7 @@ Point3D::~Point3D(void)
 {
 }
 
-Point3D::Point3D(double x0,double y0,double z0)
+Point3D::Point3D(float x0,float y0,float z0)
 {
 	x = x0;
 	y = y0;

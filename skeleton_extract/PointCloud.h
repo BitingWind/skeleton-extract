@@ -6,12 +6,32 @@
 #include<time.h>
 #include "Point3D.h"
 #include "Vertex.h"
+#include<map>
+#include<vector>
+#include<math.h>
+class Coordiate
+{
+	int x;
+	int y;
+	int z;
+public:
+	Coordiate(void);
+	Coordiate(int xx,int yy,int zz):x(xx),y(yy),z(zz)
+	{
 
+	}
+
+	bool operator==(Coordiate other)
+	{
+		return x==other.x && y==other.y && z==other.z;
+	}
+};
 class PointCloud
 {
 public:
 	
 	int number;
+	int sample_number;
 	Point3D* points;
 	Vertex* vertexs;
 
@@ -48,7 +68,8 @@ private:
 	// count the Axis Range( (min,max) >< (x,y,z) )and default radius(RADIUS_DEFAULT)
 	void count_default_radius();
 
+	float distance2(Point3D p1,Point3D p2);
 	//make the grids via radius 
-	void grid(float radius);
+	//void grid(float radius);
 };
 
